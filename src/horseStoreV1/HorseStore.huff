@@ -1,0 +1,84 @@
+// send calldata -> function dispatch -> function
+
+// 60008060093d393df3 -> Contract Creation Bytecode
+// 60038060093d393df3 5f 6012
+// XXXXX              -> Runtime Code
+
+/* Huff Interfaces*/
+#define function updateHorseNumber(uint256) nonpayable returns()
+#define function readNumberOfHorses() view returns(uint256)
+
+#define constant NUMBER_OF_HORSES_STORAGE_SLOT = FREE_STORAGE_POINTER()
+
+#define macro MAIN() = takes(0) returns(0) {
+    0x00              // [0]
+    calldataload      // [calldata]
+    // Need to cut down calldata -> to get function selector
+    // Right shift operation -> SHR
+    // 4 bytes of function selector, shift by 28 bytes => 224 bits
+    // 224 == 0xe0 (hex)
+    0xe0              // [calldata (32 bytes), 0xe0]
+    shr               // [function_selector]
+
+    dup1              // [function_selector, function_selector]
+
+    // Jump -> function data associated with the selector
+    // If f_select == updateHorseNumber -> jump to that code
+    // If f_select == readHorseNumber -> jump to that code
+    // 0xcdfead2e == update
+    // 0xe026c017 == read
+
+    // 0xcdfead2e         // [function_selector, function_selector, 0xcdfead2e]
+    __FUNC_SIG(updateHorseNumber)
+    eq                 // [function_selector, true/false]
+
+    // If true -> Jump to updateHorseNumber
+    updateJump         // [function_selector, true/false, updateHorseNumberProgramCounter]
+    jumpi              // [function_selector]
+
+    // readNumberOfHorses, 0xe026c017 // [function_selector]
+    // 0xe026c017         // [function_selector, 0xe026c017]
+    __FUNC_SIG(readNumberOfHorses)
+    eq                 // [true_if_f_selector_matches]
+    readJump           // [true_if_f_selector_matches, readJump (PC)]
+    jumpi              // []
+
+    0x00               // [0]
+    0x00               // [0, 0]
+    revert             // []
+
+    updateJump:
+        SET_NUMBER_OF_HORSES()
+
+    readJump:
+        GET_NUMBER_OF_HORSES()
+}
+
+// 0xcdfead2e0000000000000000000000000000000000000000000000000000000    000000001
+#define macro SET_NUMBER_OF_HORSES() = takes(0) returns(0) {
+    // To update storage
+    // 1. Get a storage slot
+    // 2. Read the new value from calldata
+    // 3. Use sstore opcode to update the storage
+    
+    0x04              // [4] - 'bytes offset(need to remove fn_selector to get input)'
+    calldataload      // [calldata - func_selector (or value)]
+    [NUMBER_OF_HORSES_STORAGE_SLOT]      // [value, 0 (or ptr)]
+    sstore
+    stop
+
+}
+
+#define macro GET_NUMBER_OF_HORSES() = takes(0) returns(0) {
+    // To read value
+    // 1. Get the storage slot
+    // 2. Load the value to memory
+    // 3. Return value
+    [NUMBER_OF_HORSES_STORAGE_SLOT]      // [KEY]
+    sload                                // [VALUE]
+    0x00                                 // [VALUE, 0]
+    mstore                               // Stack [] / Memory: [VALUE]
+    0x20                                 // [0x20] / Memory: [VALUE]
+    0x00                                 // [0x20, 0x00] / Memory: [VALUE]
+    return                               // [] / Memory: []
+}
