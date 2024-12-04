@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity 0.8.26;
+
+import {Base_TestV1} from "./Base_TestV1.t.sol";
+
+contract HorseStoreSolc is Base_TestV1 {
+    
+}
