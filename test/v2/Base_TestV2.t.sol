@@ -73,12 +73,11 @@ abstract contract Base_TestV2 is Test {
     }
 
     /* Helper function */
-    function _isContract(address account) internal view returns(bool) {
+    function _isContract(address account) internal view returns (bool) {
         uint256 size;
         assembly {
             size := extcodesize(account)
         }
         return size > 0;
     }
-
 }
